@@ -1,0 +1,151 @@
+{
+  "info": {
+    "name": "PayPlus API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Healthcheck",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Merchants",
+      "item": [
+        {
+          "name": "Create Merchant",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/merchants",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Acme Corp\"\n}" }
+          }
+        },
+        {
+          "name": "List Merchants",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/merchants" }
+        },
+        {
+          "name": "Get Merchant by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/merchants/1" }
+        },
+        {
+          "name": "Deactivate Merchant",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/merchants/1/status",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"inactive\"\n}" }
+          }
+        },
+        {
+          "name": "Activate Merchant",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/merchants/1/status",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"active\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wallets",
+      "item": [
+        {
+          "name": "Create Wallet",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/wallets",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"employee_id\": \"emp-001\",\n  \"currency\": \"ILS\",\n  \"balance\": \"1000.00\"\n}" }
+          }
+        },
+        {
+          "name": "List Wallets",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/wallets" }
+        },
+        {
+          "name": "Get Wallet by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/wallets/1" }
+        },
+        {
+          "name": "Deactivate Wallet",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/wallets/1/status",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"inactive\"\n}" }
+          }
+        },
+        {
+          "name": "Activate Wallet",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/wallets/1/status",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"active\"\n}" }
+          }
+        },
+        {
+          "name": "Get Ledger Entries for Wallet",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/wallets/1/ledger-entries" }
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "Charge",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/transactions/charge",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"wallet_id\": 1,\n  \"merchant_id\": 1,\n  \"amount\": \"100.00\",\n  \"currency\": \"ILS\",\n  \"client_request_id\": \"order-001\"\n}" }
+          }
+        },
+        {
+          "name": "Charge - Insufficient Funds",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/transactions/charge",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"wallet_id\": 1,\n  \"merchant_id\": 1,\n  \"amount\": \"99999.00\",\n  \"currency\": \"ILS\",\n  \"client_request_id\": \"order-overdraft\"\n}" }
+          }
+        },
+        {
+          "name": "Refund",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/transactions/refund",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"original_transaction_id\": 1,\n  \"client_request_id\": \"refund-001\"\n}" }
+          }
+        },
+        {
+          "name": "List Transactions",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/transactions" }
+        },
+        {
+          "name": "Get Transaction by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/transactions/1" }
+        },
+        {
+          "name": "Get Ledger Entries for Transaction",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/transactions/1/ledger-entries" }
+        }
+      ]
+    }
+  ]
+}
