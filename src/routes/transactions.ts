@@ -9,6 +9,9 @@ router.post('/charge', async (req: Request, res: Response, next: NextFunction) =
     if (!wallet_id || !merchant_id || !amount || !currency) {
       return res.status(400).json({ error: { code: 'validation_error', message: 'wallet_id, merchant_id, amount, and currency are required', status: 400 } });
     }
+    if (isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      return res.status(400).json({ error: { code: 'validation_error', message: 'amount must be a positive number', status: 400 } });
+    }
     const tx = await transactionService.charge({
       wallet_id: Number(wallet_id),
       merchant_id: Number(merchant_id),

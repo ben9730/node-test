@@ -1,19 +1,12 @@
 # PayPlus Wallet Transaction API
 
-A fintech-style backend REST API for managing wallets, merchants, transactions, and ledger entries.
+A backend REST API for managing wallets, merchants, and payments.
 
-Built with: **Node.js + TypeScript + Express + PostgreSQL + Knex**
-
----
-
-## Requirements
-
-- Node.js (v18+)
-- PostgreSQL (v14+)
+**Stack:** Node.js · TypeScript · Express · PostgreSQL · Knex
 
 ---
 
-## Setup
+## Quick Start
 
 ### 1. Install dependencies
 ```bash
@@ -21,19 +14,19 @@ npm install
 ```
 
 ### 2. Create the database
-Open psql or pgAdmin and run:
+Open pgAdmin or psql and run:
 ```sql
 CREATE DATABASE payplus;
 ```
 
-### 3. Configure environment
-Copy `.env.example` to `.env` and fill in your credentials:
+### 3. Set your credentials
+Edit the `.env` file:
 ```
-DATABASE_URL=postgresql://postgres:postgres123@localhost:5432/payplus
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/payplus
 PORT=3000
 ```
 
-### 4. Run migrations (creates all tables)
+### 4. Create the tables
 ```bash
 npm run migrate
 ```
@@ -43,108 +36,154 @@ npm run migrate
 npm run dev
 ```
 
-Server runs at: `http://localhost:3000`
+The API is now running at `http://localhost:3000`
 
 ---
 
-## API Endpoints
+## How It Works
+
+The system has 4 entities:
+
+- **Merchant** — a business that charges wallets (e.g. a shop)
+- **Wallet** — holds money for an employee or company
+- **Transaction** — a charge or refund on a wallet
+- **Ledger Entry** — an automatic record created for every successful money movement (audit trail)
+
+**Typical flow:**
+1. Create a merchant
+2. Create a wallet with a balance
+3. Charge the wallet → balance decreases, ledger entry created
+4. Refund the charge → balance restored, ledger entry created
+
+---
+
+## API Reference
+
+Base URL: `http://localhost:3000`
+
+For POST/PATCH requests: set `Content-Type: application/json` in the headers.
+
+---
 
 ### Merchants
-Merchants are the businesses that initiate transactions.
 
-| Method | URL | Description |
-|--------|-----|-------------|
-| POST | `/api/merchants` | Create a merchant |
-| GET | `/api/merchants` | List all merchants |
-| GET | `/api/merchants/:id` | Get merchant by ID |
-| PATCH | `/api/merchants/:id/status` | Activate or deactivate a merchant |
-
-**Create merchant body:**
-```json
-{ "name": "Acme Corp" }
+**Create**
+```
+POST /api/merchants
+{ "name": "Coffee Shop" }
 ```
 
-**Update status body:**
-```json
+**Get one**
+```
+GET /api/merchants/1
+```
+
+**List all**
+```
+GET /api/merchants
+```
+
+**Activate / Deactivate**
+```
+PATCH /api/merchants/1/status
 { "status": "inactive" }
 ```
+> Inactive merchants cannot process transactions.
 
 ---
 
 ### Wallets
-Wallets represent employee or company funds.
 
-| Method | URL | Description |
-|--------|-----|-------------|
-| POST | `/api/wallets` | Create a wallet |
-| GET | `/api/wallets` | List all wallets |
-| GET | `/api/wallets/:id` | Get wallet by ID (includes current balance) |
-| PATCH | `/api/wallets/:id/status` | Activate or deactivate a wallet |
-
-**Create wallet body:**
-```json
+**Create**
+```
+POST /api/wallets
 { "employee_id": "emp-001", "currency": "ILS", "balance": "1000.00" }
 ```
-
 Supported currencies: `ILS`, `USD`, `EUR`
+
+**Get one** (shows current balance)
+```
+GET /api/wallets/1
+```
+
+**List all**
+```
+GET /api/wallets
+```
+
+**Activate / Deactivate**
+```
+PATCH /api/wallets/1/status
+{ "status": "inactive" }
+```
+> Inactive wallets cannot be charged or refunded.
 
 ---
 
 ### Transactions
-Transactions are payment operations initiated by a merchant on a wallet.
 
-| Method | URL | Description |
-|--------|-----|-------------|
-| POST | `/api/transactions/charge` | Charge (deduct) money from a wallet |
-| POST | `/api/transactions/refund` | Refund a previous charge |
-| GET | `/api/transactions` | List all transactions |
-| GET | `/api/transactions/:id` | Get transaction by ID |
-
-**Charge body:**
-```json
+**Charge** — take money from a wallet
+```
+POST /api/transactions/charge
 {
   "wallet_id": 1,
   "merchant_id": 1,
   "amount": "100.00",
   "currency": "ILS",
-  "client_request_id": "unique-request-id-123"
+  "client_request_id": "order-12345"
 }
 ```
+> `client_request_id` prevents duplicate charges — sending the same ID twice returns the original result without charging again.
 
-**Refund body:**
-```json
+**Refund** — return money to a wallet
+```
+POST /api/transactions/refund
 {
   "original_transaction_id": 5,
-  "client_request_id": "unique-refund-id-456"
+  "client_request_id": "refund-12345"
 }
 ```
+> You can only refund a successful charge. Use the `id` from the charge response.
 
-> `client_request_id` is used for **idempotency** — if you send the same request twice with the same ID, the second call returns the original result without charging again.
+**Get one**
+```
+GET /api/transactions/5
+```
 
-**Transaction status values:**
-- `success` — money was moved
-- `declined` — request was rejected (see `decline_reason`)
-
-**Decline reasons:**
-- `insufficient_funds` — wallet balance too low
-- `wallet_inactive` — wallet is deactivated
-- `merchant_inactive` — merchant is deactivated
+**List all**
+```
+GET /api/transactions
+```
 
 ---
 
 ### Ledger Entries
-The ledger is an immutable audit trail of all money movements. Declined transactions do NOT create ledger entries.
 
-| Method | URL | Description |
-|--------|-----|-------------|
-| GET | `/api/wallets/:id/ledger-entries` | All ledger entries for a wallet |
-| GET | `/api/transactions/:id/ledger-entries` | Ledger entries for a specific transaction |
+The ledger is a read-only history of all money movements. Only successful transactions appear here — declined ones do not.
+
+**All entries for a wallet**
+```
+GET /api/wallets/1/ledger-entries
+```
+
+**All entries for a transaction**
+```
+GET /api/transactions/5/ledger-entries
+```
 
 ---
 
-## Error Format
+## When a Charge Fails
 
-All errors follow this structure:
+A charge returns HTTP **409** with an error explaining why:
+
+| Code | Meaning |
+|------|---------|
+| `insufficient_funds` | Wallet balance is too low |
+| `wallet_inactive` | Wallet has been deactivated |
+| `merchant_inactive` | Merchant has been deactivated |
+
+Example error response:
 ```json
 {
   "error": {
@@ -152,36 +191,25 @@ All errors follow this structure:
     "message": "Wallet does not have enough available balance",
     "status": 409,
     "details": {
-      "wallet_id": 1,
       "available_balance": "50.00",
-      "requested_amount": "120.00"
+      "requested_amount": "200.00"
     }
   }
 }
 ```
 
+> Declined transactions are still recorded in the database for audit purposes.
+
 ---
 
 ## Concurrency
 
-Concurrent charge requests on the same wallet are handled safely using PostgreSQL row-level locking (`SELECT FOR UPDATE`). If two requests arrive at the same time, only one will succeed — the wallet can never be overdrawn.
-
----
-
-## Database Tables
-
-| Table | Purpose |
-|-------|---------|
-| `wallets` | Stores wallet balance, currency, status |
-| `merchants` | Stores merchant name and status |
-| `transactions` | Records every charge and refund attempt |
-| `ledger_entries` | Immutable financial audit trail (successful transactions only) |
+If two charge requests arrive at the same time for the same wallet, only one will succeed. The system uses PostgreSQL row-level locking to guarantee the wallet can never go below zero.
 
 ---
 
 ## Assumptions
 
-- Refunds use the same amount as the original charge (full refund only)
-- A declined transaction is still recorded in the database for audit purposes
-- `client_request_id` is optional but recommended for idempotency
+- Refunds always return the full original amount (no partial refunds)
+- `client_request_id` is optional but strongly recommended to avoid duplicate charges
 - Balance is stored as `DECIMAL(19,4)` for financial precision
