@@ -16,8 +16,7 @@ router.post('/charge', async (req: Request, res: Response, next: NextFunction) =
       currency,
       client_request_id,
     });
-    const statusCode = tx.status === 'success' ? 201 : 422;
-    res.status(statusCode).json(tx);
+    res.status(201).json(tx);
   } catch (err) {
     next(err);
   }
@@ -33,8 +32,7 @@ router.post('/refund', async (req: Request, res: Response, next: NextFunction) =
       original_transaction_id: Number(original_transaction_id),
       client_request_id,
     });
-    const statusCode = tx.status === 'success' ? 201 : 422;
-    res.status(statusCode).json(tx);
+    res.status(201).json(tx);
   } catch (err) {
     next(err);
   }

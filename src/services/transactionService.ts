@@ -28,7 +28,7 @@ export async function charge(data: {
     }
 
     if (wallet.status === 'inactive') {
-      const [tx] = await trx('transactions').insert({
+      await trx('transactions').insert({
         wallet_id: data.wallet_id,
         merchant_id: data.merchant_id,
         type: 'charge',
@@ -37,12 +37,12 @@ export async function charge(data: {
         status: 'declined',
         decline_reason: 'wallet_inactive',
         client_request_id: data.client_request_id ?? null,
-      }).returning('*');
-      return tx;
+      });
+      throw new AppError('wallet_inactive', 'Wallet is inactive and cannot perform transactions', 409, { wallet_id: data.wallet_id });
     }
 
     if (merchant.status === 'inactive') {
-      const [tx] = await trx('transactions').insert({
+      await trx('transactions').insert({
         wallet_id: data.wallet_id,
         merchant_id: data.merchant_id,
         type: 'charge',
@@ -51,15 +51,15 @@ export async function charge(data: {
         status: 'declined',
         decline_reason: 'merchant_inactive',
         client_request_id: data.client_request_id ?? null,
-      }).returning('*');
-      return tx;
+      });
+      throw new AppError('merchant_inactive', 'Merchant is inactive and cannot process transactions', 409, { merchant_id: data.merchant_id });
     }
 
     const balance = parseFloat(wallet.balance);
     const amount = parseFloat(data.amount);
 
     if (balance < amount) {
-      const [tx] = await trx('transactions').insert({
+      await trx('transactions').insert({
         wallet_id: data.wallet_id,
         merchant_id: data.merchant_id,
         type: 'charge',
@@ -68,8 +68,12 @@ export async function charge(data: {
         status: 'declined',
         decline_reason: 'insufficient_funds',
         client_request_id: data.client_request_id ?? null,
-      }).returning('*');
-      return tx;
+      });
+      throw new AppError('insufficient_funds', 'Wallet does not have enough available balance', 409, {
+        wallet_id: data.wallet_id,
+        available_balance: wallet.balance,
+        requested_amount: data.amount,
+      });
     }
 
     // Deduct balance
@@ -139,7 +143,7 @@ export async function refund(data: {
     }
 
     if (wallet.status === 'inactive') {
-      const [tx] = await trx('transactions').insert({
+      await trx('transactions').insert({
         wallet_id: original.wallet_id,
         merchant_id: original.merchant_id,
         type: 'refund',
@@ -149,12 +153,12 @@ export async function refund(data: {
         decline_reason: 'wallet_inactive',
         original_transaction_id: data.original_transaction_id,
         client_request_id: data.client_request_id ?? null,
-      }).returning('*');
-      return tx;
+      });
+      throw new AppError('wallet_inactive', 'Wallet is inactive and cannot perform transactions', 409, { wallet_id: original.wallet_id });
     }
 
     if (merchant.status === 'inactive') {
-      const [tx] = await trx('transactions').insert({
+      await trx('transactions').insert({
         wallet_id: original.wallet_id,
         merchant_id: original.merchant_id,
         type: 'refund',
@@ -164,8 +168,8 @@ export async function refund(data: {
         decline_reason: 'merchant_inactive',
         original_transaction_id: data.original_transaction_id,
         client_request_id: data.client_request_id ?? null,
-      }).returning('*');
-      return tx;
+      });
+      throw new AppError('merchant_inactive', 'Merchant is inactive and cannot process transactions', 409, { merchant_id: original.merchant_id });
     }
 
     // Credit balance
